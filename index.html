@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>ناشر HTML</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@500;700&display=swap">
+<style>
+/* Layout: one calm column. Four numbered sections that mirror the real pipeline, then a live progress log and the result. */
+:root {
+  --bg: #f1f3f8;
+  --surface: #ffffff;
+  --fg: #141824;
+  --muted: #5b6279;
+  --line: #d9dde9;
+  --accent: #3350e8;
+  --accent-fg: #ffffff;
+  --soft: #e8ecfb;
+  --ok: #14804a;
+  --warn: #9a5800;
+  --err: #c4281c;
+  --font-display: "Reem Kufi", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1118; --surface: #171b26; --fg: #e7eaf5; --muted: #98a0ba; --line: #2a3042;
+    --accent: #8da2ff; --accent-fg: #0b0e18; --soft: #1e2540; --ok: #4cc38a; --warn: #e0a53a; --err: #ff7a70;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1118; --surface: #171b26; --fg: #e7eaf5; --muted: #98a0ba; --line: #2a3042;
+  --accent: #8da2ff; --accent-fg: #0b0e18; --soft: #1e2540; --ok: #4cc38a; --warn: #e0a53a; --err: #ff7a70;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: max(28px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+}
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 2.3rem; line-height: 1.1; text-wrap: balance; }
+.lede { margin: 8px 0 0; color: var(--muted); max-width: 52ch; }
+
+section { display: flex; flex-direction: column; gap: 12px; padding-top: 22px; border-top: 1px solid var(--line); min-width: 0; }
+.sh { display: flex; align-items: center; gap: 10px; }
+.num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--soft); color: var(--accent); font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; flex: none; }
+h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 1.25rem; }
+.hint { margin: 0; color: var(--muted); font-size: 0.86rem; max-width: 62ch; }
+label.lb { font-size: 0.88rem; font-weight: 500; }
+
+input[type="text"], input[type="password"], textarea {
+  width: 100%; font: inherit; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+input.ltr, textarea.ltr { direction: ltr; text-align: left; font-family: var(--font-mono); font-size: 0.86rem; }
+textarea { min-height: 150px; resize: vertical; }
+input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible, .drop:focus-within {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row > .grow { flex: 1; min-width: 0; }
+
+button, .btn {
+  font: inherit; cursor: pointer; border-radius: 8px; padding: 9px 16px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+button:hover, .btn:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+button.primary:hover { filter: brightness(1.06); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+button.link { border: 0; background: none; padding: 4px 6px; color: var(--accent); }
+.big { width: 100%; padding: 13px 16px; font-size: 1.05rem; }
+
+.check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.88rem; cursor: pointer; }
+.check input { margin: 4px 0 0; accent-color: var(--accent); width: 16px; height: 16px; flex: none; }
+
+.err { color: var(--err); font-size: 0.88rem; margin: 0; }
+.warn { color: var(--warn); font-size: 0.88rem; margin: 0; }
+
+.me { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.me img { width: 38px; height: 38px; border-radius: 50%; background: var(--soft); flex: none; }
+.me .who { flex: 1; min-width: 0; }
+.me b { display: block; font-family: var(--font-mono); font-size: 0.9rem; font-weight: 500; direction: ltr; text-align: right; overflow: hidden; text-overflow: ellipsis; }
+.me small { color: var(--ok); }
+
+.drop {
+  display: grid; place-items: center; text-align: center; gap: 4px; padding: 26px 16px; cursor: pointer;
+  border: 1.5px dashed var(--line); border-radius: 12px; background: var(--surface);
+  transition: border-color .15s, background-color .15s;
+}
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--soft); }
+.drop strong { font-weight: 600; }
+.drop span { color: var(--muted); font-size: 0.86rem; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.files li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.files .nm { flex: 1; min-width: 0; direction: ltr; text-align: right; font-family: var(--font-mono); font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files .sz { color: var(--muted); font-size: 0.78rem; font-family: var(--font-mono); direction: ltr; }
+.tag { font-size: 0.72rem; padding: 1px 8px; border-radius: 99px; background: var(--soft); color: var(--accent); }
+details summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; width: fit-content; }
+details[open] summary { margin-bottom: 8px; }
+
+.badge { font-size: 0.78rem; padding: 2px 10px; border-radius: 99px; background: var(--soft); color: var(--muted); }
+.badge.new { color: var(--ok); }
+.badge.old { color: var(--warn); }
+.preview { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); direction: ltr; text-align: right; overflow-wrap: anywhere; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.steps li { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start; }
+.dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); position: relative; margin-top: 2px; }
+.steps .t { font-weight: 500; }
+.steps .d { color: var(--muted); font-size: 0.84rem; overflow-wrap: anywhere; }
+li[data-s="run"] .dot { border-color: var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+li[data-s="done"] .dot { background: var(--ok); border-color: var(--ok); }
+li[data-s="done"] .dot::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 9px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+li[data-s="error"] .dot { background: var(--err); border-color: var(--err); }
+li[data-s="error"] .dot::after { content: "\00d7"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--bg); font-size: 14px; line-height: 1; }
+li[data-s="error"] .d { color: var(--err); }
+li[data-s="pending"] .t { color: var(--muted); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.result { padding: 16px; border: 1.5px solid var(--ok); border-radius: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 12px; }
+.result h3 { margin: 0; font-family: var(--font-display); font-weight: 500; color: var(--ok); font-size: 1.15rem; }
+.url { font-family: var(--font-mono); font-size: 0.9rem; direction: ltr; text-align: left; overflow-wrap: anywhere; color: var(--accent); }
+
+.hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hist li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hist a { font-family: var(--font-mono); font-size: 0.82rem; direction: ltr; color: var(--accent); overflow-wrap: anywhere; }
+.hist time { color: var(--muted); font-size: 0.78rem; }
+
+@media (max-width: 480px) { h1 { font-size: 1.9rem; } }
+@media (prefers-reduced-motion: reduce) {
+  li[data-s="run"] .dot { animation: none; border-top-color: var(--accent); border-right-color: var(--accent); }
+  .drop { transition: none; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>ناشر HTML</h1>
+    <p class="lede">ارفع ملف HTML ويتولى التطبيق الباقي: ينشئ مستودعاً على GitHub، ويرفع الملف، ويفعّل GitHub Pages، ثم يعطيك رابطاً جاهزاً للمشاركة.</p>
+  </header>
+
+  <section id="s-acc">
+    <div class="sh"><span class="num">1</span><h2>الحساب</h2></div>
+    <div id="acc-in" class="grow" style="display:flex;flex-direction:column;gap:10px">
+      <label class="lb" for="token">رمز الوصول من GitHub (Personal access token)</label>
+      <input class="ltr" type="password" id="token" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+      <label class="check"><input type="checkbox" id="remember" checked> <span>تذكّر الرمز على هذا الجهاز</span></label>
+      <div class="row">
+        <button type="button" class="primary" id="connect">اتصال</button>
+        <a class="btn" target="_blank" rel="noopener" href="https://github.com/settings/tokens/new?scopes=repo&amp;description=HTML%20Publisher">إنشاء رمز جديد</a>
+      </div>
+      <p class="hint">من صفحة إنشاء الرمز اترك صلاحية <b dir="ltr">repo</b> مفعّلة واضغط Generate token ثم الصق الرمز هنا. يُرسل الرمز إلى api.github.com فقط ولا يمر بأي خادم آخر.</p>
+    </div>
+    <div id="acc-ok" class="me" hidden>
+      <img id="avatar" alt="" width="38" height="38">
+      <div class="who"><b id="login"></b><small>متصل</small></div>
+      <button type="button" class="link" id="logout">خروج</button>
+    </div>
+    <p class="err" id="acc-err" role="alert" hidden></p>
+    <p class="warn" id="acc-warn" hidden></p>
+  </section>
+
+  <section id="s-file">
+    <div class="sh"><span class="num">2</span><h2>الملف</h2></div>
+    <label class="drop" id="drop" for="file">
+      <strong>اسحب ملف HTML إلى هنا أو اضغط للاختيار</strong>
+      <span>يمكن اختيار عدة ملفات (صور، CSS، JavaScript). الملف الرئيسي يصبح index.html.</span>
+    </label>
+    <input class="vh" type="file" id="file" multiple>
+    <ul class="files" id="flist" hidden></ul>
+    <details id="paste-box">
+      <summary>أو الصق الشيفرة مباشرة</summary>
+      <textarea class="ltr" id="paste" placeholder="&lt;!doctype html&gt;…" spellcheck="false"></textarea>
+    </details>
+  </section>
+
+  <section id="s-repo">
+    <div class="sh"><span class="num">3</span><h2>المستودع</h2><span class="badge" id="badge" hidden></span></div>
+    <label class="lb" for="repo">اسم المستودع</label>
+    <input class="ltr" type="text" id="repo" autocomplete="off" spellcheck="false" placeholder="my-site">
+    <p class="err" id="repo-err" hidden></p>
+    <p class="preview" id="preview"></p>
+    <label class="check" id="allow-row" hidden><input type="checkbox" id="allow"> <span>أوافق على تحديث هذا المستودع الموجود. سيُستبدل ملف index.html وكل ملف يحمل اسماً مطابقاً لملفاتي.</span></label>
+    <p class="hint">الصفحات المجانية في GitHub Pages تتطلب مستودعاً عاماً، لذلك يُنشأ المستودع بوضع Public.</p>
+  </section>
+
+  <section id="s-go">
+    <div class="sh"><span class="num">4</span><h2>النشر</h2></div>
+    <button type="button" class="primary big" id="go">انشر الآن</button>
+    <p class="err" id="go-err" role="alert" hidden></p>
+    <ol class="steps" id="prog" hidden></ol>
+    <div class="result" id="result" hidden>
+      <h3>الموقع منشور</h3>
+      <div class="url" id="res-url"></div>
+      <p class="hint" id="res-note" hidden></p>
+      <div class="row">
+        <a class="btn primary" id="res-open" target="_blank" rel="noopener" href="#">فتح الموقع</a>
+        <button type="button" id="res-copy">نسخ الرابط</button>
+        <button type="button" class="link" id="res-again">نشر ملف آخر</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="s-hist" hidden>
+    <div class="sh"><h2>آخر عمليات النشر</h2><button type="button" class="link" id="hist-clear">مسح السجل</button></div>
+    <ul class="hist" id="hist"></ul>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var API = 'https://api.github.com';
+  var MAX_FILE = 25 * 1024 * 1024;
+  var TOKEN_KEY = 'htmlpub.token', HIST_KEY = 'htmlpub.history';
+
+  var LS = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  var state = { token: '', user: null, files: [], repoExists: null, repoPrivate: false, busy: false, nameDirty: false, checkId: 0 };
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function show(el, on, text) { el.hidden = !on; if (text !== undefined) el.textContent = text; }
+
+  /* ---------- GitHub API ---------- */
+  async function gh(method, path, body, token) {
+    var headers = {
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Authorization': 'Bearer ' + (token || state.token)
+    };
+    if (body) headers['Content-Type'] = 'application/json';
+    var res;
+    try {
+      res = await fetch(API + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    } catch (e) {
+      throw new Error('تعذّر الاتصال بـ GitHub. تحقق من اتصال الإنترنت وحاول مجدداً.');
+    }
+    var text = await res.text(), data = null;
+    if (text) { try { data = JSON.parse(text); } catch (e) { data = text; } }
+    return { status: res.status, ok: res.ok, data: data, headers: res.headers };
+  }
+  function ghMsg(r) {
+    var m = r.data && r.data.message ? String(r.data.message) : '';
+    if (r.data && r.data.errors && r.data.errors[0]) {
+      var e0 = r.data.errors[0];
+      m += ' ' + (typeof e0 === 'string' ? e0 : (e0.message || e0.code || ''));
+    }
+    return m.trim();
+  }
+  function apiErr(r, what) {
+    var m = ghMsg(r), s = r.status, out;
+    if (s === 401) out = 'الرمز غير صالح أو منتهي الصلاحية. أنشئ رمزاً جديداً.';
+    else if (s === 403) {
+      var rem = r.headers && r.headers.get && r.headers.get('x-ratelimit-remaining');
+      out = rem === '0' ? 'تجاوزت حد الطلبات المسموح به من GitHub. انتظر قليلاً ثم أعد المحاولة.'
+                        : 'الرمز لا يملك الصلاحية المطلوبة. تأكد من تفعيل صلاحية repo. ' + m;
+    }
+    else if (s === 404) out = 'غير موجود أو لا تملك صلاحية الوصول إليه. ' + m;
+    else if (s === 422 && /already exists/i.test(m)) out = 'اسم المستودع مستخدم مسبقاً في حسابك.';
+    else out = 'خطأ ' + s + (m ? ': ' + m : '');
+    return new Error((what ? what + ' — ' : '') + out);
+  }
+
+  /* ---------- helpers ---------- */
+  function bufToB64(buf) {
+    var bytes = new Uint8Array(buf), bin = '', CH = 0x8000;
+    for (var i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    return btoa(bin);
+  }
+  function encPath(p) { return p.split('/').map(encodeURIComponent).join('/'); }
+  function fmtSize(n) { return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+  function validName(n) { return /^[A-Za-z0-9._-]{1,100}$/.test(n) && n !== '.' && n !== '..'; }
+  function slug(s) {
+    s = s.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').replace(/-{2,}/g, '-');
+    if (!s || s === 'index') s = 'site-' + Math.random().toString(36).slice(2, 6);
+    return s.slice(0, 60);
+  }
+  function siteGuess(login, name) {
+    var l = login.toLowerCase();
+    return name.toLowerCase() === l + '.github.io' ? 'https://' + l + '.github.io/' : 'https://' + l + '.github.io/' + name + '/';
+  }
+
+  /* ---------- account ---------- */
+  function renderAccount() {
+    var on = !!state.user;
+    show($('acc-in'), !on); show($('acc-ok'), on);
+    if (on) { $('avatar').src = state.user.avatar_url || ''; $('login').textContent = state.user.login; }
+    updatePreview();
+    scheduleCheck();
+  }
+  async function connect(tok, silent) {
+    tok = (tok || '').trim();
+    show($('acc-err'), false); show($('acc-warn'), false);
+    if (!tok) { show($('acc-err'), true, 'الصق رمز الوصول أولاً.'); return; }
+    var btn = $('connect'); btn.disabled = true;
+    try {
+      var r = await gh('GET', '/user', null, tok);
+      if (r.status === 200) {
+        state.token = tok; state.user = r.data;
+        if ($('remember').checked) LS.set(TOKEN_KEY, tok); else LS.del(TOKEN_KEY);
+        var sc = r.headers.get('x-oauth-scopes');
+        if (sc !== null && !/(^|,\s*)(repo|public_repo)(\s*,|$)/.test(sc)) {
+          show($('acc-warn'), true, 'هذا الرمز لا يحمل صلاحية repo، وقد يفشل إنشاء المستودع أو تفعيل Pages.');
+        }
+        $('token').value = '';
+        renderAccount();
+      } else if (!silent) {
+        show($('acc-err'), true, apiErr(r).message);
+      } else { LS.del(TOKEN_KEY); }
+    } catch (e) {
+      if (!silent) show($('acc-err'), true, e.message);
+    } finally { btn.disabled = false; }
+  }
+  $('connect').addEventListener('click', function () { connect($('token').value, false); });
+  $('token').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect($('token').value, false); });
+  $('logout').addEventListener('click', function () {
+    state.token = ''; state.user = null; LS.del(TOKEN_KEY); renderAccount();
+  });
+
+  /* ---------- files ---------- */
+  function renderFiles() {
+    var ul = $('flist');
+    ul.textContent = '';
+    state.files.forEach(function (f, i) {
+      var li = document.createElement('li');
+      var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = f.path;
+      var sz = document.createElement('span'); sz.className = 'sz'; sz.textContent = fmtSize(f.size);
+      li.appendChild(nm);
+      if (f.main) { var t = document.createElement('span'); t.className = 'tag'; t.textContent = 'رئيسي'; li.appendChild(t); }
+      li.appendChild(sz);
+      var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'link'; rm.textContent = 'إزالة';
+      rm.addEventListener('click', function () { state.files.splice(i, 1); assignMain(); renderFiles(); });
+      li.appendChild(rm);
+      ul.appendChild(li);
+    });
+    show(ul, state.files.length > 0);
+  }
+  function assignMain() {
+    var htmls = state.files.filter(function (f) { return /\.html?$/i.test(f.name); });
+    var main = htmls.filter(function (f) { return f.name.toLowerCase() === 'index.html'; })[0] || htmls[0];
+    state.files.forEach(function (f) {
+      f.main = f === main;
+      f.path = f.main ? 'index.html' : f.name;
+    });
+    if (main && !state.nameDirty) {
+      $('repo').value = slug(main.name.toLowerCase() === 'index.html' ? '' : main.name);
+      onNameInput(true);
+    }
+  }
+  async function addFiles(list) {
+    show($('go-err'), false);
+    for (var i = 0; i < list.length; i++) {
+      var f = list[i];
+      if (f.size > MAX_FILE) { show($('go-err'), true, 'الملف ' + f.name + ' أكبر من 25 ميغابايت.'); continue; }
+      var buf = await f.arrayBuffer();
+      state.files = state.files.filter(function (x) { return x.name !== f.name; });
+      state.files.push({ name: f.name, size: f.size, b64: bufToB64(buf), path: f.name, main: false });
+    }
+    assignMain(); renderFiles();
+  }
+  $('file').addEventListener('change', function (e) { addFiles(Array.prototype.slice.call(e.target.files)); e.target.value = ''; });
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { addFiles(Array.prototype.slice.call(e.dataTransfer.files)); });
+
+  function getSources() {
+    if (state.files.length) return state.files.map(function (f) { return { path: f.path, b64: f.b64 }; });
+    var txt = $('paste').value;
+    if (txt.trim()) {
+      var bytes = new TextEncoder().encode(txt);
+      return [{ path: 'index.html', b64: bufToB64(bytes.buffer) }];
+    }
+    return [];
+  }
+
+  /* ---------- repo name ---------- */
+  var checkTimer;
+  function updatePreview() {
+    var n = $('repo').value.trim();
+    $('preview').textContent = state.user && validName(n) ? 'الرابط المتوقع: ' + siteGuess(state.user.login, n) : '';
+  }
+  function onNameInput(fromCode) {
+    if (!fromCode) state.nameDirty = true;
+    updatePreview(); scheduleCheck();
+  }
+  function scheduleCheck() {
+    clearTimeout(checkTimer);
+    state.repoExists = null;
+    show($('allow-row'), false); show($('badge'), false);
+    var n = $('repo').value.trim();
+    if (!n) { show($('repo-err'), false); return; }
+    if (!validName(n)) { show($('repo-err'), true, 'الاسم يقبل أحرفاً إنجليزية وأرقاماً و - و _ و . فقط.'); return; }
+    show($('repo-err'), false);
+    if (!state.user) return;
+    checkTimer = setTimeout(checkRepo, 500);
+  }
+  async function checkRepo() {
+    var id = ++state.checkId, n = $('repo').value.trim();
+    if (!state.user || !validName(n)) return;
+    var b = $('badge'); b.className = 'badge'; show(b, true, 'جارٍ التحقق…');
+    try {
+      var r = await gh('GET', '/repos/' + state.user.login + '/' + n);
+      if (id !== state.checkId) return;
+      if (r.status === 200) {
+        state.repoExists = true; state.repoPrivate = !!(r.data && r.data.private);
+        b.className = 'badge old'; show(b, true, 'موجود');
+        show($('allow-row'), true);
+        if (state.repoPrivate) show($('repo-err'), true, 'هذا المستودع خاص، وGitHub Pages المجانية لا تعمل مع المستودعات الخاصة.');
+      } else if (r.status === 404) {
+        state.repoExists = false;
+        b.className = 'badge new'; show(b, true, 'جديد');
+      } else { show(b, false); }
+    } catch (e) { if (id === state.checkId) show(b, false); }
+  }
+  $('repo').addEventListener('input', function () { onNameInput(false); });
+
+  /* ---------- deploy ---------- */
+  var STEPS = ['المستودع', 'رفع الملفات', 'تفعيل Pages', 'انتظار النشر'];
+  function buildSteps() {
+    var ol = $('prog'); ol.textContent = '';
+    STEPS.forEach(function (t) {
+      var li = document.createElement('li'); li.dataset.s = 'pending';
+      var dot = document.createElement('span'); dot.className = 'dot';
+      var box = document.createElement('div');
+      var a = document.createElement('div'); a.className = 't'; a.textContent = t;
+      var d = document.createElement('div'); d.className = 'd';
+      box.appendChild(a); box.appendChild(d); li.appendChild(dot); li.appendChild(box);
+      ol.appendChild(li);
+    });
+    show(ol, true);
+  }
+  function setStep(i, s, detail) {
+    var li = $('prog').children[i];
+    li.dataset.s = s;
+    if (detail !== undefined) li.querySelector('.d').textContent = detail;
+  }
+  var STATUS_AR = { queued: 'في الانتظار', building: 'قيد البناء', built: 'اكتمل', errored: 'فشل' };
+
+  async function deploy() {
+    if (state.busy) return;
+    show($('go-err'), false); show($('result'), false);
+    var name = $('repo').value.trim();
+    var fail = function (m) { show($('go-err'), true, m); };
+    if (!state.user) { fail('اتصل بحسابك في الخطوة 1 أولاً.'); return; }
+    var src = getSources();
+    if (!src.length) { fail('اختر ملف HTML أو الصق الشيفرة في الخطوة 2.'); return; }
+    if (!validName(name)) { fail('اسم المستودع غير صالح. استخدم أحرفاً إنجليزية وأرقاماً و - و _ فقط.'); return; }
+    if (state.repoExists === null) { await checkRepo(); }
+    if (state.repoExists && !$('allow').checked) { fail('المستودع موجود مسبقاً. فعّل خيار الموافقة على التحديث في الخطوة 3 للمتابعة.'); return; }
+
+    state.busy = true; $('go').disabled = true; buildSteps();
+    var step = 0;
+    try {
+      var login = state.user.login, base = '/repos/' + login + '/' + name;
+
+      /* 1. repository */
+      setStep(0, 'run'); step = 0;
+      var repo, created = false;
+      var g = await gh('GET', base);
+      if (g.status === 200) { repo = g.data; setStep(0, 'done', 'استخدام المستودع الموجود'); }
+      else if (g.status === 404) {
+        var c = await gh('POST', '/user/repos', { name: name, description: 'Published with HTML Publisher', private: false, auto_init: true });
+        if (!c.ok) throw apiErr(c, 'إنشاء المستودع');
+        repo = c.data; created = true; setStep(0, 'done', 'تم إنشاء مستودع عام جديد');
+      } else throw apiErr(g, 'فحص المستودع');
+      var branch = repo.default_branch || 'main';
+
+      /* 2. upload files, one commit each */
+      step = 1; setStep(1, 'run');
+      var lastSha = null;
+      for (var i = 0; i < src.length; i++) {
+        var f = src[i], p = base + '/contents/' + encPath(f.path);
+        setStep(1, 'run', 'رفع ' + (i + 1) + ' من ' + src.length + ': ' + f.path);
+        var sha, tries = 0, put;
+        for (;;) {
+          var ex = await gh('GET', p + '?ref=' + encodeURIComponent(branch));
+          sha = ex.status === 200 && ex.data && ex.data.sha ? ex.data.sha : undefined;
+          var body = { message: (sha ? 'Update ' : 'Add ') + f.path + ' via HTML Publisher', content: f.b64, branch: branch };
+          if (sha) body.sha = sha;
+          put = await gh('PUT', p, body);
+          if (put.ok) break;
+          var retry = put.status === 409 || (created && put.status === 404) || (put.status === 422 && /sha/i.test(ghMsg(put)));
+          if (retry && tries < 6) { tries++; await sleep(1500); continue; }
+          throw apiErr(put, 'رفع ' + f.path);
+        }
+        lastSha = put.data && put.data.commit ? put.data.commit.sha : lastSha;
+      }
+      setStep(1, 'done', src.length === 1 ? 'تم رفع index.html' : 'تم رفع ' + src.length + ' ملفات');
+
+      /* 3. GitHub Pages */
+      step = 2; setStep(2, 'run');
+      var pg = await gh('GET', base + '/pages');
+      if (pg.status === 404) {
+        var cr = await gh('POST', base + '/pages', { build_type: 'legacy', source: { branch: branch, path: '/' } });
+        if (cr.status === 409 || (cr.status === 422 && /already/i.test(ghMsg(cr)))) { pg = await gh('GET', base + '/pages'); }
+        else if (!cr.ok) throw apiErr(cr, 'تفعيل Pages');
+        else pg = cr;
+        setStep(2, 'done', 'تم تفعيل Pages');
+      } else if (pg.ok) {
+        var s = pg.data && pg.data.source;
+        if (!s || s.branch !== branch || s.path !== '/') {
+          var up = await gh('PUT', base + '/pages', { source: { branch: branch, path: '/' } });
+          if (!up.ok) throw apiErr(up, 'ضبط مصدر Pages');
+        }
+        setStep(2, 'done', 'Pages مفعّلة');
+      } else throw apiErr(pg, 'فحص Pages');
+      var siteUrl = (pg.data && pg.data.html_url) || siteGuess(login, name);
+
+      /* 4. wait for the build of our commit */
+      step = 3; setStep(3, 'run', 'بانتظار بدء البناء…');
+      var t0 = Date.now(), built = false;
+      while (Date.now() - t0 < 150000) {
+        var b = await gh('GET', base + '/pages/builds/latest');
+        var secs = Math.round((Date.now() - t0) / 1000);
+        if (b.ok && b.data) {
+          var same = !lastSha || b.data.commit === lastSha;
+          if (same && b.data.status === 'errored') throw new Error('فشل بناء الصفحة' + (b.data.error && b.data.error.message ? ': ' + b.data.error.message : '.'));
+          if (same && b.data.status === 'built') { built = true; break; }
+          setStep(3, 'run', 'الحالة: ' + (same ? (STATUS_AR[b.data.status] || b.data.status) : 'في الانتظار') + ' (' + secs + ' ث)');
+        } else { setStep(3, 'run', 'بانتظار بدء البناء (' + secs + ' ث)'); }
+        await sleep(3000);
+      }
+      setStep(3, 'done', built ? 'اكتمل البناء' : 'لم يكتمل البناء بعد');
+
+      showResult(siteUrl, built);
+      saveHistory(name, siteUrl);
+    } catch (e) {
+      setStep(step, 'error', e.message);
+      fail(e.message);
+    } finally {
+      state.busy = false; $('go').disabled = false;
+    }
+  }
+  $('go').addEventListener('click', deploy);
+
+  /* ---------- result + history ---------- */
+  function showResult(url, built) {
+    $('res-url').textContent = url;
+    $('res-open').href = url;
+    var note = $('res-note');
+    show(note, !built, 'الرابط جاهز، لكن GitHub لم يؤكد اكتمال البناء بعد. قد يظهر الموقع خلال دقيقتين إلى خمس دقائق، وبعد التحديث قد تحتاج إلى إعادة تحميل الصفحة.');
+    show($('result'), true);
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  async function copyText(text, btn) {
+    var label = btn.textContent;
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e2) {}
+      document.body.removeChild(ta);
+    }
+    btn.textContent = 'تم النسخ'; setTimeout(function () { btn.textContent = label; }, 1500);
+  }
+  $('res-copy').addEventListener('click', function () { copyText($('res-url').textContent, $('res-copy')); });
+  $('res-again').addEventListener('click', function () {
+    state.files = []; state.nameDirty = false; $('paste').value = ''; $('repo').value = '';
+    renderFiles(); onNameInput(true);
+    show($('result'), false); show($('prog'), false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  function loadHistory() { try { return JSON.parse(LS.get(HIST_KEY) || '[]') || []; } catch (e) { return []; } }
+  function saveHistory(name, url) {
+    var h = loadHistory().filter(function (x) { return x.url !== url; });
+    h.unshift({ name: name, url: url, at: Date.now() });
+    LS.set(HIST_KEY, JSON.stringify(h.slice(0, 8)));
+    renderHistory();
+  }
+  function renderHistory() {
+    var h = loadHistory(), ul = $('hist'); ul.textContent = '';
+    h.forEach(function (x) {
+      var li = document.createElement('li');
+      var a = document.createElement('a'); a.href = x.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = x.url;
+      var t = document.createElement('time');
+      try { t.textContent = new Date(x.at).toLocaleString('ar'); } catch (e) { t.textContent = ''; }
+      li.appendChild(a); li.appendChild(t); ul.appendChild(li);
+    });
+    show($('s-hist'), h.length > 0);
+  }
+  $('hist-clear').addEventListener('click', function () { LS.del(HIST_KEY); renderHistory(); });
+
+  /* ---------- boot ---------- */
+  renderHistory();
+  renderAccount();
+  var saved = LS.get(TOKEN_KEY);
+  if (saved) connect(saved, true);
+})();
+</script>
+</body>
+</html>
